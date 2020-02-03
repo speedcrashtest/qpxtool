@@ -23,6 +23,7 @@ __enable_gui=yes
 __wt_internal=yes
 __qmake=""
 __plugins_liteon_noprobe=no
+__cross_compilation=no
 
 __binsuff=""
 __libpref="lib"
@@ -39,7 +40,14 @@ qt_dir=""
 
 cleanup()
 {
-	rm -f $TMPC $TMPB
+	rm -f $TMPC $TMPB$__binsuff
+}
+
+copy_sources()
+{
+	__src_dir=`dirname $0`
+	__src_path=`realpath $__src_dir`
+	cp -a "$__src_path"/* `pwd`/
 }
 
 check_make()
@@ -188,19 +196,20 @@ check_offset64()
 			return 0; }
 	" > $TMPC
 
-#	$__cc $TMPC -o $TMPB 2>/dev/null 1>/dev/null
-	$__cc $TMPC -o $TMPB
-	if test "$?" -eq 0; then
-		OFFT_SIZE=`./$TMPB`
-		echo $OFFT_SIZE
-		if test "$OFFT_SIZE" -eq 8; then
-			OSDEFS=$OSDEFS" -DOFFT_64BIT"
+	if test "$__cross_compilation" = "no"; then
+		#$__cc $TMPC -o $TMPB 2>/dev/null 1>/dev/null
+		$__cc $TMPC -o $TMPB
+		if test "$?" -eq 0; then
+			OFFT_SIZE=`./$TMPB`
+			echo $OFFT_SIZE
+			if test "$OFFT_SIZE" -eq 8; then
+				OSDEFS=$OSDEFS" -DOFFT_64BIT"
+			fi
+		else
+			echo "no off_t type defined!"
+			exit 1
 		fi
-	else
-		echo "no off_t type defined!"
-		exit 1
 	fi
-
 
 	echo -n "Checking for fopen64()... "
 	echo "
@@ -347,6 +356,18 @@ LPNG_LIB  = $lpng_ldflags
 	echo "CXXFLAGS += -Wall -O2 $OSDEFS $LPNG_DEFS $PLUGIN_DEFS $DEFS" >> Makefile
 	echo "CFLAGS   += -Wall -O2 $OSDEFS $LPNG_DEFS $PLUGIN_DEFS $DEFS" >> Makefile
 
+	if test "$__cross_compilation" = "yes" ; then
+		echo "# additional cross-compilatio options" >> Makefile
+		echo "CC=$__cxx" >> Makefile
+		echo "CXX=$__cc" >> Makefile
+		echo "CXXFLAGS += -fPIC" >> Makefile
+		echo "CFLAGS   += -fPIC" >> Makefile
+		echo "export CXX CC" >> Makefile
+		echo "export CXXFLAGS CFLAGS" >> Makefile
+		echo "export LPNG_INC LPNG_LIB" >> Makefile
+		echo "export PREFIX BINDIR SBINDIR LIBDIR PLUGINDIR INCDIR MANDIR BINSUFF LIBS_HW LIBS_INET LIBS_DL LIBS_THREAD" >> Makefile
+	fi
+
 	if test "$__enable_debug" = "yes" ; then
 		echo "# additional debug options" >> Makefile
 		echo "CXXFLAGS += -g" >> Makefile
@@ -459,6 +480,7 @@ create_makefile_gui()
 	echo "* $mf"
 
 	rm -f $mf
+	mkdir -p `dirname $mf`
 
 	if test "$OSL" = "netbsd" ; then
 		qt_dir="/usr/pkg/qt5"
@@ -560,6 +582,7 @@ create_makefile_lib()
 	echo "* $mf"
 
 	rm -f $mf
+	mkdir -p `dirname $mf`
 
 	case "$OSL" in
 		darwin)
@@ -676,6 +699,7 @@ create_makefile_plugin()
 	echo "* $mf"
 
 	rm -f $mf
+	mkdir -p `dirname $mf`
 
 	case "$OSL" in
 		darwin)
@@ -757,6 +781,13 @@ for arg in $* ; do
 		--sbindir=*) sbindir=`echo $arg | cut -d '=' -f 2-` ;;
 		--libdir=*)  libdir=`echo $arg | cut -d '=' -f 2-` ;;
 		--mandir=*)  mandir=`echo $arg | cut -d '=' -f 2-` ;;
+		--target=*)  target=`echo $arg | cut -d '=' -f 2-`
+			echo target: $target
+			__cc=${target}-gcc
+			__cxx=${target}-g++
+			__cross_compilation=yes
+			;;
+		--host=*)  echo host: `echo $arg | cut -d '=' -f 2-` ;;
 
 		--qmake=*) __qmake=`echo $arg | cut -d '=' -f 2-` ;;
 		--disable-png) __enable_png="no" ;;
@@ -777,33 +808,41 @@ OS=`uname -s`
 OSL=`uname -s | tr '[A-Z]' '[a-z]'`
 echo $OS
 
+echo -n "Cross-compilation... "
+echo $__cross_compilation
+
+if test "$__cross_compilation" = "yes" ; then
+	OS=$target
+	OSL=$target
+fi
+
 case $OSL in
-	linux)
+	*linux*)
 		OSDEFS="-fPIC"
 		OSLIBS_DL="-ldl"
 		OSLIBS_THREAD="-lpthread"
 		__defprefix="/usr/local"
 		;;
-	gnu)
+	*gnu*)
 		OSDEFS="-fPIC"
 		OSLIBS_DL="-ldl"
 		OSLIBS_THREAD="-lpthread"
 		__defprefix="/usr"
 		;;
-	darwin)
+	*darwin*)
 		OSDEFS="-D__unix -fPIC"
 		OSLIBS_THREAD="-lpthread"
 		OSLIBS_HW="-framework CoreFoundation -framework IOKit"
 		__defprefix="/usr"
 		__libsuff=".dylib"
 		;;	
-	freebsd)
+	*freebsd*)
 		OSDEFS="-fPIC"
 		OSLIBS_THREAD="-lpthread"
 		OSLIBS_HW="-lcam"
 		__defprefix="/usr"
 		;;
-	gnu/kfreebsd)
+	*gnu/kfreebsd*)
 		OSDEFS="-fPIC"
 		OSLIBS_DL="-ldl"
 		OSLIBS_THREAD="-lpthread"
@@ -815,13 +854,12 @@ case $OSL in
 		OSLIBS_THREAD="-lpthread"
 		__defprefix="/usr"
 		;;
-	mingw32*)
+	*mingw32*)
 		OSL="mingw32"
-		__cc=gcc
-		__cpp=g++
-		OSLIBS_THREAD=""
-		OSLIBS_INET="-lws2_32"
-		__defprefix="/c/Progra~1/QPxTool"
+		OSDEFS="-fPIC"
+		OSLIBS_THREAD="-lpthread"
+		OSLIBS_INET="-lws2_32 -lstdc++"
+		#__defprefix="/c/Progra~1/QPxTool"
 		__binsuff=".exe"
 		__libpref=""
 		__libsuff=".dll"
@@ -861,7 +899,7 @@ case "$OSL" in
 		__incdir=$__prefix/include
 		__mandir=$__prefix/share/man
 		;;
-	mingw32*)
+	*mingw32*)
 		__bindir=$__prefix
 		__sbindir=$__prefix
 		__libdir=$__prefix
@@ -917,6 +955,10 @@ create_makefile_plugin
 
 if test "$__enable_gui" = "yes" ; then
 	create_makefile_gui
+fi
+
+if test "$__cross_compilation" = "yes" ; then
+	copy_sources
 fi
 
 echo ""
