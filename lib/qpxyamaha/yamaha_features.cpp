@@ -11,6 +11,7 @@
  */
 
 
+#include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -241,7 +242,7 @@ int yamaha_f1_do_tattoo(drive_info* drive, unsigned char *iimage, uint32_t bsize
 
 	while (i<tattoo_size) {
 		memset(drive->rd_buf, 0, maxbuf);
-		blen = min(maxbuf, tattoo_size-i);
+		blen = std::min(maxbuf, tattoo_size-i);
 		memcpy(drive->rd_buf, crow+i, blen);
 //		printf("block #%2d: %5d bytes / %2d sect\n",b,blen,blen/2048);
 
