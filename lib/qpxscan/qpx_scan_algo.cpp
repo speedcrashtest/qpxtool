@@ -328,7 +328,7 @@ int qscanner::run_wr_transfer()
 #endif
 		}
 	}
-	printf("readline: %d\n", n);
+	printf("readline: %ld\n", n);
 	close(pipefd[0]);
 	return 0;
 }
@@ -373,7 +373,7 @@ int qscanner::run_wr_transfer()
 //	lba_end = 4096;
 
 	get_wbuffer_capacity(dev,&ubuft,&ubuff);
-	printf("Write buffer capacity: %d kB\n", ubuft >> 10);
+	printf("Write buffer capacity: %u kB\n", ubuft >> 10);
 
 	wait_unit_ready(dev, 6);
 	printf("Writing blocks: %ld - %ld (%ld MB)\n", lba_sta, lba_end, (lba_end-lba_sta) >> 9);
@@ -431,7 +431,7 @@ int qscanner::run_wr_transfer()
 			spdX  = spdKB/(float)spd1X;
 			*/
 			calc_cur_speed(((lba-1)%bsize) + 1);
-			printf("lba: %7d    speed: %6.2f X  %6d kB/s, written: %4ldMB/%4ldMB, Ubuf: %3d%%\r",
+			printf("lba: %7d    speed: %6.2f X  %6d kB/s, written: %4ldMB/%4ldMB, Ubuf: %3u%%\r",
 					lba, spdX, spdKB, (lba-lba_sta) >> 9, (lba_end-lba_sta) >> 9, ubufp);
 			gettimeofday(&blks, NULL);
 			stat_req=0;
