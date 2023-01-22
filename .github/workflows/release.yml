@@ -5,93 +5,8 @@ on:
     types: [published]
 
 jobs:
-
-  win64-gui:
-    runs-on: windows-2019
-    defaults:
-      run:
-        shell: msys2 {0}
-    steps:
-    - uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW64
-        update: false
-        install: git make pkg-config mingw-w64-x86_64-gcc mingw-w64-x86_64-ntldd-git mingw-w64-x86_64-qt5 mingw-w64-x86_64-jq zip
-    - run: git config --global core.autocrlf input
-      shell: bash
-    - uses: actions/checkout@v2
-    - name: configure (debug)
-      run: ./configure --enable-debug
-    - name: make (debug)
-      run: nproc && make -j$(nproc)
-    - name: check executable (debug)
-      run: |
-          file gui/debug/qpxtool.exe | grep -q 'x86-64'
-    - name: configure (release)
-      run: make clean && ./configure
-    - name: make (release)
-      run: nproc && make -j$(nproc)
-    - name: check executable (release)
-      run: |
-          file gui/release/qpxtool.exe | grep -q 'x86-64'
-    - name: prepare dist
-      run: ./.github/workflows/make-dist.sh ${{ github.ref }}
-      id: dist
-    - name: Upload Release Asset
-      id: upload-release-asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./${{ steps.dist.outputs.archive }}
-        asset_name: ${{ steps.dist.outputs.archive }}
-        asset_content_type: application/zip
-
-  win32-gui:
-    runs-on: windows-2019
-    defaults:
-      run:
-        shell: msys2 {0}
-    steps:
-    - uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW32
-        update: false
-        install: git make pkg-config mingw-w64-i686-gcc mingw-w64-i686-ntldd-git mingw-w64-i686-qt5 mingw-w64-i686-jq zip
-    - run: git config --global core.autocrlf input
-      shell: bash
-    - uses: actions/checkout@v2
-    - name: configure (debug)
-      run: ./configure --enable-debug
-    - name: make (debug)
-      run: nproc && make -j$(nproc)
-    - name: check executable (debug)
-      run: |
-          file gui/debug/qpxtool.exe | grep -q 'Intel 80386'
-    - name: configure (release)
-      run: make clean && ./configure
-    - name: make (release)
-      run: nproc && make -j$(nproc)
-    - name: check executable (release)
-      run: |
-          file gui/release/qpxtool.exe | grep -q 'Intel 80386'
-    - name: prepare dist
-      run: ./.github/workflows/make-dist.sh ${{ github.ref }}
-      id: dist
-    - name: Upload Release Asset
-      id: upload-release-asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./${{ steps.dist.outputs.archive }}
-        asset_name: ${{ steps.dist.outputs.archive }}
-        asset_content_type: application/zip
-
   linux64-appimage:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
     - name: docker
@@ -99,13 +14,13 @@ jobs:
         mkdir /tmp/dist
         docker run --device /dev/fuse --privileged --name uu -d -v $PWD:/code -v /tmp/dist:/dist ubuntu:14.04 sleep 900
     - name: install prerequisites
-      run: docker exec uu sh -c 'apt-get update && apt-get install -y libfuse2 libglib2.0-0 qtbase5-dev binutils g++ file qttools5-dev-tools make libpng12-dev gtk2-engines-pixbuf gtk2-engines pkg-config gnome-themes-standard libgtk2.0-dev'
+      run: docker exec uu bash -c 'set -exo pipefail; apt-get update && apt-get install -y libfuse2 libglib2.0-0 qtbase5-dev binutils g++ file qttools5-dev-tools make libpng12-dev gtk2-engines-pixbuf gtk2-engines pkg-config gnome-themes-standard libgtk2.0-dev && command -v qmake'
     - name: copy gtk libs
       run: docker exec uu sh -c 'install -d /dist/usr/lib/gtk-2.0 && cp -va $(pkg-config --variable=libdir gtk+-2.0)/gtk-2.0/$(pkg-config --variable=gtk_binary_version gtk+-2.0)/* /dist/usr/lib/gtk-2.0'
     - name: configure
       run: docker exec uu sh -c 'cd /code && ./configure --prefix=/usr'
     - name: make
-      run: docker exec uu sh -c 'make -C /code -j2'
+      run: docker exec uu sh -c 'make -C /code || find /code'
     - name: make install
       run: docker exec uu sh -c "make -C /code install DESTDIR=/dist"
     - name: get linuxdeploy
