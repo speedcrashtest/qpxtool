@@ -504,7 +504,7 @@ create_makefile_gui()
 		echo "LDFLAGS+=-Wl,-R/usr/X11R7/lib" >> $mf
 	fi
 	echo "QTDIR=$qt_dir" >> $mf
-	echo "QMAKE5= $__qmake" >> $mf
+	echo "QMAKE5=$__qmake" >> $mf
 	echo "TAB=\$(shell printf \"%b\" \"\\t\")" >> $mf
 
 	if test "$GMAKE" = "yes" ; then
@@ -588,7 +588,7 @@ uninstall:
 	echo "
 Makefile.qmake:
 	rm -f Makefile.qmake" >> $mf
-	echo    "	\$(QMAKE5) LIBS+=-L../lib/lib LIBS+=-lqpxtransport $QDEBUG -o Makefile.qmake" >> $mf
+	echo    "	qmake LIBS+=-L../lib/lib LIBS+=-lqpxtransport $QDEBUG -o Makefile.qmake" >> $mf
 	echo    "	test -e Makefile.qmake.Release && test -e Makefile.qmake.Debug && sed -i -re '/qpxtool.exe: /a #TAB#windres -v qpxtool.rc -O coff -o obj/winres.o' Makefile.qmake.Release Makefile.qmake.Debug || true" >> $mf
 	echo    "	test -e Makefile.qmake.Release && test -e Makefile.qmake.Debug && sed -i -re 's=@object_script.qpxtool=obj/winres.o @object_script.qpxtool=' Makefile.qmake.Release Makefile.qmake.Debug || true" >> $mf
 	echo -n "	test -e Makefile.qmake.Release && test -e Makefile.qmake.Debug && sed -i -re 's/#TAB#/\$(TAB)/' Makefile.qmake.Release Makefile.qmake.Debug || true" >> $mf
