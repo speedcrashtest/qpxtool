@@ -105,7 +105,7 @@ jobs:
     - name: configure
       run: docker exec uu sh -c 'cd /code && ./configure --prefix=/usr'
     - name: make
-      run: docker exec uu sh -c 'make -C /code -j2'
+      run: docker exec uu sh -c 'make -C /code || find /code'
     - name: make install
       run: docker exec uu sh -c "make -C /code install DESTDIR=/dist"
     - name: get linuxdeploy
