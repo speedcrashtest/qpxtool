@@ -504,7 +504,7 @@ create_makefile_gui()
 		echo "LDFLAGS+=-Wl,-R/usr/X11R7/lib" >> $mf
 	fi
 	echo "QTDIR=$qt_dir" >> $mf
-	echo "QMAKE5= $__qmake" >> $mf
+	echo "QMAKE5=$__qmake" >> $mf
 	echo "TAB=\$(shell printf \"%b\" \"\\t\")" >> $mf
 
 	if test "$GMAKE" = "yes" ; then
